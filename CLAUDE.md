@@ -1,63 +1,102 @@
-# CLAUDE.md
+# CLAUDE.md — GMP (gmotoperformance.de)
 
-Guidance for [Claude Code](https://claude.com/claude-code) when working in this repository.
+> **Hinweis zur Herkunft:** Diese Fassung ist aus `START-HIER.md` (Stand
+> 9.10.2026) rekonstruiert. Die Original-`CLAUDE.md` des Projektordners
+> `GMP_FINALE_v1.0` liegt hier nicht vor. Enthält sie mehr als das Folgende,
+> **gilt sie** — dann diese Datei durch sie ersetzen. Hier steht nichts
+> Erfundenes: jede Regel ist in `START-HIER.md` belegt.
 
-> **Status: greenfield.** This repo has no application code yet. Sections marked
-> `TODO` are placeholders — fill them in as the project takes shape, and delete
-> this notice once the first real code lands.
+## Grundsätzliches
 
-## Project overview
+- **Kein Build, kein npm, kein Framework.** Die Dateien, die im Repo liegen,
+  sind die Dateien, die auf dem Server laufen. Keine Bundler, keine
+  Transpiler, keine Paketverwaltung.
+- **Deployment ist Handarbeit** über den Plesk-Dateimanager.
+- **Zugangsdaten gehören nach `private/`**, außerhalb von `httpdocs`.
+- **Technische Daten werden nicht erfunden.** Ölmengen, Ventilspiele und
+  Drehmomente stammen aus den Modelldaten oder vom Betreiber — nie aus
+  Schätzung, Analogie oder Erinnerung. Fehlt ein Wert, bleibt er offen.
+- **Gebucht ≠ gezahlt.** Was in der App nicht gebucht ist, heißt „in der App
+  ist nichts gebucht", nicht „es wurde nicht gezahlt". Diese Unterscheidung
+  nie zusammenziehen.
 
-TODO — one paragraph: what this project does, who uses it, and the problem it solves.
+## Ordnerstruktur
 
-## Commands
+```
+httpdocs/           der Bestand, wie er auf dem Server steht
+tests/              15 Testreihen plus Sammelstarter (tests/alle.js)
+pruefsummen.js      Abgleich nach jedem Upload
+START-HIER.md       Stand, offene Punkte, Historie
+_nicht-verwendet/   vier Hero-Bilder (7,4 MB), auf die nichts verweist
+                    und die auch nie auf dem Server lagen
+```
 
-The canonical commands for working in this repo. Keep this table accurate; it is
-the first thing Claude reads before running anything.
+## Vor jeder Änderung
 
-| Task | Command |
-| --- | --- |
-| Install dependencies | TODO |
-| Run locally | TODO |
-| Run all tests | TODO |
-| Run a single test | TODO |
-| Lint | TODO |
-| Format | TODO |
-| Type-check | TODO |
-| Build | TODO |
+```bash
+node tests/alle.js
+```
 
-Prefer running the narrowest check that covers a change (a single test file, the
-affected package) over the full suite, then widen before committing.
+Muss **„15 Reihen, 15 gruen"** melden. Erst dann anfangen. Meldet es das
+nicht, ist das der erste Befund — nicht die eigentliche Aufgabe.
 
-## Repository layout
+## Nach jeder Änderung
 
-TODO — the directories that matter and what belongs in each. Describe the
-*boundaries* ("HTTP handlers only; no business logic") rather than listing files,
-which go stale.
+1. `node tests/alle.js` — wieder alles grün?
+2. Bei Änderungen an `Werkstatt/app.js` oder `Werkstatt/styles.css`: die
+   Cache-Marke in `httpdocs/Werkstatt/index.php` hochzählen. Sie steht an
+   **zwei** Stellen. **Beide oder keine** — sonst lädt ein Teil der Besucher
+   die alte Datei. (Stand 9.10.2026: `20261009-stempel-109`.)
+3. Hochladen über den Plesk-Dateimanager.
+4. **Abgleichen** — nicht optional:
 
-## Conventions
+```bash
+node pruefsummen.js --browser
+```
 
-Coding standards, commit format, review expectations, and testing requirements
-live in [STAND.md](./STAND.md). Read it before making changes; it is the
-authority on *how* work is done here, and this file defers to it.
+Der Befehl, den das ausgibt, läuft in der Konsole des geöffneten
+Plesk-Dateimanagers. Er holt jede Datei zurück und vergleicht. **Nur was
+gleich ist, ist angekommen.**
 
-## Working agreements for Claude
+> **Plesk meldet Erfolg auch dann, wenn nichts ankam.** Am 9.10.2026 genau
+> so passiert: Sitzung abgelaufen, Upload meldete „No upload response", auf
+> dem Server stand weiter die alte Datei. Ein Upload ohne Abgleich ist kein
+> Deployment.
 
-- **Match the surrounding code.** Naming, comment density, error handling, and
-  module structure should look like what is already there, not like a generic
-  best-practice template.
-- **Ask before adding a dependency.** New runtime dependencies are a long-term
-  commitment. Propose the dependency and the reason before installing it.
-- **Don't widen the task.** Fix what was asked. Note adjacent problems you spot
-  rather than silently folding them into the same change.
-- **Never weaken a test to get green.** Skipping, deleting, or loosening a failing
-  test to pass CI is not a fix. Root-cause it, or say plainly why you can't.
-- **Verify before claiming done.** Run the relevant checks and report what
-  actually happened, including failures and anything you skipped.
-- **Secrets stay out of the repo.** No credentials, tokens, or API keys in code,
-  config, commit messages, or test fixtures.
+## Die vier Dateien, bei denen der Server recht hat
 
-## Gotchas
+Diese vier dürfen **nicht** aus dem Repo hochgeladen werden — die
+Live-Fassungen können mehr:
 
-TODO — the non-obvious things that waste time: required env vars, services that
-must be running, slow or flaky suites, generated files that must not be hand-edited.
+| Datei | Server | hier |
+|---|---|---|
+| `Werkstatt/paypal.php` | 10.579 B | 9.423 B |
+| `Werkstatt/bootstrap.php` | 5.028 B | 5.932 B |
+| `Werkstatt/paypal-lib.php` | 2.748 B | 2.985 B |
+| `bezahlen/start.php` | 5.286 B | 5.142 B |
+
+`paypal.php` legt live die Positionsliste zum Zahllink ab. In
+`bootstrap.php` steckt hier umgekehrt eine **ausdrücklich abgelehnte**
+Sicherheitsänderung, die nie live gehen soll.
+
+**Wer eine dieser vier ändern will, holt sie zuerst von Hand aus Plesk** und
+arbeitet auf dieser Fassung weiter. Sonst gehen Funktionen verloren, die seit
+Monaten laufen.
+
+Zum Zurückholen: Der Plesk-Download liefert den Quelltext, aber der
+Sicherheitsfilter des Browserwerkzeugs hält ihn zurück, weil er Zugangsdaten
+darin vermutet. **Von Hand im Browser herunterladen geht** — diesen Weg
+nehmen, statt es über das Werkzeug zu erzwingen.
+
+## Arbeitsweise
+
+- **Erst lesen, dann ändern.** Der Bestand in `httpdocs/` ist laufender
+  Betrieb, kein Entwurf.
+- **Nicht ausweiten.** Was gefragt war, wird geändert. Angrenzendes, das
+  auffällt, wird genannt — nicht stillschweigend mitgeändert.
+- **Kein Test wird weichgemacht.** Eine rote Reihe wird ursächlich behoben
+  oder offen benannt, nie übersprungen oder angepasst, damit sie grün wird.
+- **Festgeschriebene Rechnungen bleiben unberührt.** Korrekturen an der
+  Rechenlogik gelten für Neues, nicht rückwirkend.
+- **Vor „fertig" wird geprüft.** `node tests/alle.js` plus Abgleich, und
+  berichtet wird, was wirklich herauskam — Fehlschläge eingeschlossen.
